@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎵 叫醒点歌 & 节目板</title>
+    <style>
+        :root {
+            --bg: #f0f4f8; --card: #ffffff; --primary: #5b9bd5; --primary-hover: #4a89c4;
+            --text: #2d3a4a; --text-secondary: #5e6f82; --border: #dce3ea; --muted: #8a9bb5;
+            --danger: #c4686e; --shadow: 0 2px 12px rgba(0, 0, 0, 0.04); --radius: 16px; --input-bg: #f7f9fc;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: var(--bg); color: var(--text); padding: 20px; min-height: 100vh; display: flex; justify-content: center; align-items: flex-start; }
+        .container { max-width: 720px; width: 100%; }
+        .header { text-align: center; margin-bottom: 24px; }
+        .header h1 { font-size: 1.8rem; font-weight: 600; color: #2d3a4a; }
+        .header p { color: var(--text-secondary); margin-top: 4px; font-size: 0.9rem; }
+        .countdown { background: #e3f0fa; border-radius: 12px; padding: 10px 18px; text-align: center; font-weight: 500; color: #2d3a4a; margin-bottom: 16px; }
+        .countdown span { font-weight: 700; color: var(--primary); }
+        .card { background: var(--card); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); margin-bottom: 16px; border: 1px solid var(--border); }
+        .card h2 { font-size: 1.2rem; margin-bottom: 16px; color: #2d3a4a; }
+        .type-switch { display: flex; gap: 8px; margin-bottom: 16px; }
+        .type-btn { background: transparent; border: 1px solid var(--border); border-radius: 20px; padding: 8px 18px; font-size: 0.9rem; color: var(--text-secondary); cursor: pointer; }
+        .type-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .form-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+        .form-group { flex: 1; min-width: 140px; }
+        .form-group label { display: block; font-weight: 500; margin-bottom: 6px; font-size: 0.85rem; color: var(--text-secondary); }
+        .form-group input { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: 10px; font-size: 0.95rem; outline: none; background: var(--input-bg); }
+        .btn { background: var(--primary); color: white; border: none; border-radius: 10px; padding: 10px 20px; font-size: 0.95rem; font-weight: 500; cursor: pointer; }
+        .btn:hover { background: var(--primary-hover); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-outline { background: transparent; border: 1px solid var(--primary); color: var(--primary); }
+        .btn-sm { padding: 6px 14px; font-size: 0.8rem; border-radius: 8px; }
+        .filter-bar { display: flex; gap: 10px; margin-bottom: 14px; }
+        .filter-btn { background: #eef3fa; border: 1px solid var(--border); border-radius: 8px; padding: 6px 14px; font-size: 0.8rem; cursor: pointer; }
+        .filter-btn.active { background: var(--primary); color: white; }
+        .table-wrapper { overflow-x: auto; margin-top: 10px; }
+        table { width: 100%; border-collapse: collapse; min-width: 480px; font-size: 0.9rem; }
+        th { text-align: left; padding: 12px 8px; border-bottom: 1px solid var(--border); color: var(--text-secondary); font-size: 0.8rem; cursor: pointer; }
+        td { padding: 10px 8px; border-bottom: 1px solid #f0f2f5; }
+        .type-badge { display: inline-block; background: #f0f4ff; color: #3b6cb4; border-radius: 12px; padding: 2px 10px; font-size: 0.78rem; }
+        .type-badge.show { background: #fef6e4; color: #b7791f; }
+        .delete-btn { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 1rem; }
+        .actions { display: flex; justify-content: space-between; margin-top: 16px; flex-wrap: wrap; gap: 8px; }
+        .empty-message { text-align: center; padding: 30px; color: var(--muted); }
+        .badge { background: #eef3fa; color: #3b6cb4; border-radius: 12px; padding: 2px 12px; font-size: 0.8rem; margin-left: 8px; }
+        .admin-tag { background: var(--primary); color: white; border-radius: 12px; padding: 2px 10px; font-size: 0.7rem; margin-left: 6px; }
+        .login-bar { display: flex; gap: 8px; align-items: center; }
+        .login-bar input { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); width: 120px; }
+        @media (max-width: 500px) {
+            .form-row { flex-direction: column; }
+            .btn { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌞 叫醒点歌台 · 节目板</h1>
+            <p>中午叫醒服务 — 匿名点歌 / 点节目</p>
+        </div>
+
+        <div class="countdown" id="countdownBox">
+            ⏰ 距离今天中午 <span id="wakeupTime">12:00</span> 还有 <span id="countdownDisplay">计算中...</span>
+        </div>
+
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                <span id="adminStatus">🔓 游客模式（仅可提交）</span>
+                <div class="login-bar">
+                    <input type="password" id="passwordInput" placeholder="管理员密码" autocomplete="off">
+                    <button class="btn btn-sm" id="loginBtn">🔐 登录</button>
+                    <button class="btn btn-sm btn-outline" id="logoutBtn" style="display:none;">退出</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>✍️ 添加内容</h2>
+            <div class="type-switch">
+                <button class="type-btn active" data-type="song">🎵 点歌</button>
+                <button class="type-btn" data-type="show">📺 点节目</button>
+            </div>
+            <div class="form-row" id="formFields"></div>
+        </div>
+
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <h2 style="margin-bottom: 0;">📋 汇总列表 <span class="badge" id="countBadge">0项</span><span class="admin-tag" id="adminModeTag" style="display:none;">管理员</span></h2>
+                <div class="filter-bar">
+                    <button class="filter-btn active" data-filter="all">全部</button>
+                    <button class="filter-btn" data-filter="today">📅 只看今天</button>
+                </div>
+            </div>
+            <div class="table-wrapper">
+                <table id="mainTable">
+                    <thead>
+                        <tr>
+                            <th>类型</th>
+                            <th data-sort="name">名称</th>
+                            <th data-sort="extra">附加信息</th>
+                            <th data-sort="time">时间</th>
+                            <th id="actionHeader">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr class="empty-message"><td colspan="5">加载中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="actions">
+                <span style="color: var(--muted); font-size:0.8rem;">💡 数据实时同步</span>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-outline btn-sm" id="clearOldBtn" style="display:none;">🗂️ 删除今天之前</button>
+                    <button class="btn btn-outline btn-sm" id="clearAllBtn" style="display:none;">🗑️ 清空全部</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== 已帮你替换好的配置（用户名已改为英文） ==========
+        const GITHUB_USER = 'quanlin923-web';
+        const GITHUB_REPO = 'seon';
+        const GITHUB_TOKEN = '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';
+        // ========================================================
+
+        const DATA_FILE = 'data.json';
+        const API_URL = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${DATA_FILE}`;
+        const ADMIN_PASSWORD = 'admin123';
+        const WAKEUP_HOUR = 12;
+        const WAKEUP_MINUTE = 0;
+
+        let isAdmin = sessionStorage.getItem('isAdmin') === 'true';
+        let currentType = 'song';
+        let allItems = [];
+        let filterMode = 'all';
+        let fileSha = null;
+
+        async function fetchData() {
+            try {
+                const res = await fetch(API_URL, {
+                    headers: { 'Authorization': `token ${GITHUB_TOKEN}` }
+                });
+                if (res.status === 404) {
+                    allItems = [];
+                } else {
+                    const json = await res.json();
+                    fileSha = json.sha;
+                    allItems = JSON.parse(atob(json.content));
+                }
+                renderTable();
+            } catch (e) { console.error('读取失败', e); }
+        }
+
+        async function saveData(items) {
+            const content = btoa(unescape(encodeURIComponent(JSON.stringify(items))));
+            const body = {
+                message: 'update data',
+                content: content
+            };
+            if (fileSha) body.sha = fileSha;
+
+            const res = await fetch(API_URL, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `token ${GITHUB_TOKEN}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body)
+            });
+            const json = await res.json();
+            fileSha = json.content.sha;
+            await fetchData();
+        }
+
+        async function addItem(type, name, extra) {
+            const newItem = { type, name, extra: extra || '', timestamp: Date.now() };
+            await saveData([...allItems, newItem]);
+        }
+
+        async function deleteItem(index) {
+            if (!isAdmin) return alert('仅管理员可删除');
+            const updated = allItems.filter((_, i) => i !== index);
+            await saveData(updated);
+        }
+
+        async function clearAll() {
+            if (!isAdmin || allItems.length === 0) return;
+            if (!confirm('确定要清空所有记录吗？')) return;
+            await saveData([]);
+        }
+
+        async function clearOld() {
+            if (!isAdmin) return;
+            const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+            const ts = todayStart.getTime();
+            const oldIndices = [];
+            allItems.forEach((item, i) => { if (item.timestamp && item.timestamp < ts) oldIndices.push(i); });
+            if (oldIndices.length === 0) return alert('没有今天之前的记录');
+            if (!confirm(`确定要删除 ${oldIndices.length} 条记录吗？`)) return;
+            await saveData(allItems.filter((_, i) => !oldIndices.includes(i)));
+        }
+
+        function renderForm() {
+            const isSong = currentType === 'song';
+            formFields.innerHTML = isSong ? `
+                <div class="form-group"><label>🎵 歌曲名</label><input type="text" id="nameInput" placeholder="例如：稻香" autocomplete="off"></div>
+                <div class="form-group"><label>🎤 歌手 (必填)</label><input type="text" id="extraInput" placeholder="例如：周杰伦" autocomplete="off"></div>
+                <button class="btn" id="submitBtn">➕ 提交点歌</button>
+            ` : `
+                <div class="form-group"><label>📺 节目名称</label><input type="text" id="nameInput" placeholder="例如：动物世界" autocomplete="off"></div>
+                <div class="form-group"><label>📝 备注 (选填)</label><input type="text" id="extraInput" placeholder="例如：BBC纪录片" autocomplete="off"></div>
+                <button class="btn" id="submitBtn">➕ 提交节目</button>
+            `;
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.addEventListener('click', async () => {
+                const name = document.getElementById('nameInput').value.trim();
+                const extra = document.getElementById('extraInput').value.trim();
+                if (isSong && (!name || !extra)) return alert('请完整填写歌曲名和歌手');
+                if (!isSong && !name) return alert('请填写节目名称');
+                submitBtn.disabled = true; submitBtn.textContent = '提交中...';
+                await addItem(currentType, name, extra || '');
+                document.getElementById('nameInput').value = '';
+                document.getElementById('extraInput').value = '';
+                submitBtn.disabled = false; submitBtn.textContent = isSong ? '➕ 提交点歌' : '➕ 提交节目';
+            });
+        }
+
+        function renderTable() {
+            let filtered = allItems;
+            if (filterMode === 'today') {
+                const today = new Date(); today.setHours(0,0,0,0);
+                filtered = allItems.filter(item => item.timestamp >= today.getTime());
+            }
+            const sorted = [...filtered].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+            countBadge.textContent = filtered.length + '项';
+            if (sorted.length === 0) {
+                tableBody.innerHTML = '<tr class="empty-message"><td colspan="5">暂无记录</td></tr>';
+                return;
+            }
+            tableBody.innerHTML = sorted.map((item, idx) => {
+                const date = new Date(item.timestamp);
+                const timeStr = `${date.getMonth()+1}/${date.getDate()} ${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
+                const typeHtml = item.type === 'song' ? '<span class="type-badge">🎵 歌曲</span>' : '<span class="type-badge show">📺 节目</span>';
+                const deleteBtn = isAdmin ? `<button class="delete-btn" data-index="${idx}">✕</button>` : '';
+                return `<tr><td>${typeHtml}</td><td>${item.name}</td><td>${item.extra || '-'}</td><td>${timeStr}</td>${isAdmin ? `<td>${deleteBtn}</td>` : ''}</tr>`;
+            }).join('');
+            if (isAdmin) {
+                document.querySelectorAll('.delete-btn').forEach(btn => {
+                    btn.addEventListener('click', () => deleteItem(parseInt(btn.dataset.index)));
+                });
+            }
+        }
+
+        function updateAdminUI() {
+            if (isAdmin) {
+                document.getElementById('adminStatus').innerHTML = '🔐 管理员模式（可管理）';
+                adminModeTag.style.display = 'inline-block';
+                clearAllBtn.style.display = 'inline-flex';
+                clearOldBtn.style.display = 'inline-flex';
+                actionHeader.style.display = '';
+                document.getElementById('loginBtn').style.display = 'none';
+                document.getElementById('logoutBtn').style.display = 'inline-flex';
+                document.getElementById('passwordInput').style.display = 'none';
+            } else {
+                document.getElementById('adminStatus').innerHTML = '🔓 游客模式（仅提交）';
+                adminModeTag.style.display = 'none';
+                clearAllBtn.style.display = 'none';
+                clearOldBtn.style.display = 'none';
+                actionHeader.style.display = 'none';
+                document.getElementById('loginBtn').style.display = 'inline-flex';
+                document.getElementById('logoutBtn').style.display = 'none';
+                document.getElementById('passwordInput').style.display = 'inline-block';
+            }
+        }
+
+        document.getElementById('loginBtn').addEventListener('click', () => {
+            if (document.getElementById('passwordInput').value === ADMIN_PASSWORD) {
+                sessionStorage.setItem('isAdmin', 'true');
+                isAdmin = true;
+                updateAdminUI();
+                renderTable();
+                document.getElementById('passwordInput').value = '';
+            } else { alert('密码错误'); }
+        });
+
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            sessionStorage.removeItem('isAdmin');
+            isAdmin = false;
+            updateAdminUI();
+            renderTable();
+        });
+
+        document.querySelectorAll('.type-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentType = btn.dataset.type;
+                renderForm();
+            });
+        });
+
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                filterMode = btn.dataset.filter;
+                renderTable();
+            });
+        });
+
+        clearAllBtn.addEventListener('click', clearAll);
+        clearOldBtn.addEventListener('click', clearOld);
+
+        function updateCountdown() {
+            const now = new Date();
+            const target = new Date(now);
+            target.setHours(WAKEUP_HOUR, WAKEUP_MINUTE, 0, 0);
+            let diff = target - now;
+            if (diff < 0) { countdownDisplay.textContent = '今天已过 ✨'; return; }
+            const h = Math.floor(diff / 3600000);
+            const m = Math.floor((diff % 3600000) / 60000);
+            const s = Math.floor((diff % 60000) / 1000);
+            countdownDisplay.textContent = `${h}时${m}分${s}秒`;
+        }
+        setInterval(updateCountdown, 1000);
+        updateCountdown();
+
+        updateAdminUI();
+        renderForm();
+        fetchData();
+        setInterval(fetchData, 5000);
+    </script>
+</body>
+</html>
