@@ -120,14 +120,11 @@
     </div>
 
     <script>
-        // ========== 已替换新令牌 ==========
-        const GITHUB_USER = 'quanlin923-web';
-        const GITHUB_REPO = 'seon';
-        const GITHUB_TOKEN = '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';
-        // =================================
+        // ==========================================
+        // 这里是你的数据仓库链接（已更新）
+        const API_URL = 'https://jsonkeeper.com/b/O1ABN';
+        // ==========================================
 
-        const DATA_FILE = 'data.json';
-        const API_URL = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${DATA_FILE}`;
         const ADMIN_PASSWORD = 'admin123';
         const WAKEUP_HOUR = 12;
         const WAKEUP_MINUTE = 0;
@@ -136,42 +133,40 @@
         let currentType = 'song';
         let allItems = [];
         let filterMode = 'all';
-        let fileSha = null;
 
+        const formFields = document.getElementById('formFields');
+        const tableBody = document.getElementById('tableBody');
+        const countBadge = document.getElementById('countBadge');
+        const adminModeTag = document.getElementById('adminModeTag');
+        const actionHeader = document.getElementById('actionHeader');
+        const clearAllBtn = document.getElementById('clearAllBtn');
+        const clearOldBtn = document.getElementById('clearOldBtn');
+        const countdownDisplay = document.getElementById('countdownDisplay');
+
+        // 从 jsonkeeper 读取数据（GET 请求，无需鉴权）
         async function fetchData() {
             try {
                 const res = await fetch(API_URL, {
-                    headers: { 'Authorization': `token ${GITHUB_TOKEN}` }
+                    headers: { 'Accept': 'application/json' }
                 });
-                if (res.status === 404) {
-                    allItems = [];
-                } else {
-                    const json = await res.json();
-                    fileSha = json.sha;
-                    allItems = JSON.parse(atob(json.content));
-                }
+                if (!res.ok) throw new Error('读取失败');
+                const data = await res.json();
+                allItems = Array.isArray(data) ? data : [];
                 renderTable();
-            } catch (e) { console.error('读取失败', e); }
+            } catch (e) {
+                console.error('读取数据失败', e);
+                if (allItems.length === 0) renderTable();
+            }
         }
 
+        // 保存数据（PUT 请求，覆盖整个 JSON）
         async function saveData(items) {
-            const content = btoa(unescape(encodeURIComponent(JSON.stringify(items))));
-            const body = {
-                message: 'update data',
-                content: content
-            };
-            if (fileSha) body.sha = fileSha;
-
             const res = await fetch(API_URL, {
                 method: 'PUT',
-                headers: {
-                    'Authorization': `token ${GITHUB_TOKEN}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(body)
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(items)
             });
-            const json = await res.json();
-            fileSha = json.content.sha;
+            if (!res.ok) throw new Error('保存失败');
             await fetchData();
         }
 
@@ -221,10 +216,16 @@
                 if (isSong && (!name || !extra)) return alert('请完整填写歌曲名和歌手');
                 if (!isSong && !name) return alert('请填写节目名称');
                 submitBtn.disabled = true; submitBtn.textContent = '提交中...';
-                await addItem(currentType, name, extra || '');
-                document.getElementById('nameInput').value = '';
-                document.getElementById('extraInput').value = '';
-                submitBtn.disabled = false; submitBtn.textContent = isSong ? '➕ 提交点歌' : '➕ 提交节目';
+                try {
+                    await addItem(currentType, name, extra || '');
+                    document.getElementById('nameInput').value = '';
+                    document.getElementById('extraInput').value = '';
+                } catch (e) {
+                    alert('提交失败，请检查网络或重试');
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = isSong ? '➕ 提交点歌' : '➕ 提交节目';
+                }
             });
         }
 
